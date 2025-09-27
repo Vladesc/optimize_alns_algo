@@ -43,7 +43,7 @@ if __name__ == "__main__":
     instanceDirectory = f"{currFilePath}\\instances"  # Verzeichnis von den Instanzen
     #instancesToSolve=["tiny-0","small-0","medium-0"]   # auszuführende Instanzen angeben
 
-    instancesToSolve=["tiny-1"]   # auszuführende Instanzen angeben
+    instancesToSolve=["small-0"]   # auszuführende Instanzen angeben
     random.seed(1)
 
     for instance in instancesToSolve:

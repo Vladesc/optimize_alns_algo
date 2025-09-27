@@ -1,4 +1,42 @@
 {
     "instance": "tiny-0",
-    "batches": []
+    "batches": [
+        {
+            "picklists": [
+                [
+                    "warehouse-item-3",
+                    "warehouse-item-22",
+                    "warehouse-item-95",
+                    "warehouse-item-69",
+                    "warehouse-item-61",
+                    "warehouse-item-62",
+                    "warehouse-item-0"
+                ]
+            ],
+            "orders": [
+                "order-2",
+                "order-7",
+                "order-0"
+            ]
+        },
+        {
+            "picklists": [
+                [
+                    "warehouse-item-11",
+                    "warehouse-item-64",
+                    "warehouse-item-71",
+                    "warehouse-item-42"
+                ],
+                [
+                    "warehouse-item-56",
+                    "warehouse-item-87"
+                ]
+            ],
+            "orders": [
+                "order-1",
+                "order-4",
+                "order-5"
+            ]
+        }
+    ]
 }

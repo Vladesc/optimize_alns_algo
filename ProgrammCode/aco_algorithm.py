@@ -220,51 +220,7 @@ def flat_orders(order_list:List[bpd.Order]) -> List:
         orders.append({"order_id":order.id, "items":[id.id for id in order.positions]})
     return orders
 
-"""
-    item_locations = {
-        'A': [('Zone1', (0, 0), str(uuid.uuid4())), ('Zone2', (3, 1), str(uuid.uuid4())), ('Zone3', (3, 1), str(uuid.uuid4())), ('Zone4', (3, 1), str(uuid.uuid4()))],
-        'B': [('Zone1', (1, 2), str(uuid.uuid4())), ('Zone2', (4, 2), str(uuid.uuid4()))],
-        'C': [('Zone1', (2, 2), str(uuid.uuid4()))],
-        'D': [('Zone2', (3, 0), str(uuid.uuid4()))],
-        'E': [('Zone2', (4, 1), str(uuid.uuid4())), ('Zone3', (4, 1), str(uuid.uuid4())), ('Zone4', (4, 1), str(uuid.uuid4()))],
-        'F': [('Zone2', (5, 3), str(uuid.uuid4()))],
-        'G': [('Zone1', (2, 4), str(uuid.uuid4()))],
-        'H': [('Zone2', (3, 5), str(uuid.uuid4()))]
-    }
-    item_volumes = {
-        'A': 1.0,
-        'B': 1.5,
-        'C': 1.0,
-        'D': 2.0,
-        'E': 1.0,
-        'F': 2.5,
-        'G': 0.5,
-        'H': 1.5
-    }
-    orders = [
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'B', 'C']},
-        {"order_id": str(uuid.uuid4()), "items": ['D', 'E']},
-        {"order_id": str(uuid.uuid4()), "items": ['F', 'G', 'H']},
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'E', 'G']},
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'E', 'G']},
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'E', 'G']},
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'E', 'G']},
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'E', 'G']},
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'E', 'G']},
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'E', 'G']},
-        {"order_id": str(uuid.uuid4()), "items": ['A', 'E', 'G']}
-    ]
-"""
 def run(instance:bpd.Instance):
-
-    print(flat_whi_location(instance.warehouse_items))
-    print("------------------------------")
-    print("------------------------------")
-    print(flat_item_volumes(instance.articles))
-    print("------------------------------")
-    print("------------------------------")
-    print(flat_orders(instance.orders))
-
     item_locations = flat_whi_location(instance.warehouse_items)
     item_volumes = flat_item_volumes(instance.articles)
     orders = flat_orders(instance.orders)
