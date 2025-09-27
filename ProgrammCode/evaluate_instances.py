@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     currFilePath = os.path.dirname(__file__)
     instanceDirectory = f"{currFilePath}\\instances"  # Verzeichnis von den Instanzen
-    solutionsToEvaluate=[f"{instanceDirectory}\\small-0\\batches.json"]   # zu überprüfende Lösungs(Batches).json-Dateien angeben
-    print(solutionsToEvaluate)
+    solutionsToEvaluate=[f"{instanceDirectory}\\medium-0\\batches.json"]   # zu überprüfende Lösungs(Batches).json-Dateien angeben
     for solution in solutionsToEvaluate:
         logger.info(f"\nRead {solution} instance")
         with open(solution, "r") as file:

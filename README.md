@@ -7,13 +7,11 @@ Ich hoffe du kannst mit den Infos arbeiten in den Präsi findest du noch ein paa
 # Ziele
 
 ## Primär
-Ein optimierter ALNS Algo. und Rekonstruierbarkeit der Ergebnisse. Oder alternativ ein "besserer" Algorithmusansatz.
+Ermitteln der geringsten durchschnittlichen Laufstrecke pro Produkt unter Berücksichtigung der gegebenen Rahmenparameter.
+Optimale Auslastung der Anzahl Artikel und des Volumens des "Packers" bei Verarbeitung der Bestellungen.
 
 ## Sekundär
 Eine Kommentierte Version des ALNS/des gewählten Algorithmus, so das die Belegerstellung schneller geht^^ (Dienstag ist Abgabe xD)
-
-## Tertiär
-Den Beleg schreiben😂
 
 # Algorithmus
 ## TBB (truncate branch-and-bound Algorithmus)
@@ -35,19 +33,12 @@ Lib für Implementierung: https://github.com/N-Wouda/ALNS
 Eine Abgewandelte Form des K-Means Algorithmus anwenden, um die Produkte zu finden, die am nächsten beieinander liegen.
 Ergebnis: K-Means Algorithm ist fürs Clustering von Daten und nicht zur Laufwegoptimierung gedacht.
 
-# Gedanken
-## Chunking
-Vielleicht wäre es eine Idee, Bestellungen mit den meisten identischen Produkten zu gruppieren und einen Mitarbeiter dann alle ähnlichen Bestellungen abarbeiten lassen. Die einzelne Bestellung in dem jeweiligen Chunk wird dadurch vermutlich langsamer fertig gestellt. Allerdings sollte es dazu führen, das die einzelne Bestellung im Schnitt schneller abgeschlossen und die Laufwege im Gesamten verkürzt werden.
--- Entsprechende Parametrisierung ist in den Parametern gegeben, sodass die Zusammenfassung von Bestellungen durch die Aufgabenstellung ermöglicht wird.
-
-
 # Vorgaben
 
 ## Parameter eines "Packers"
 - ‼️Der Start und Endpunkt eines Packers liegt immer bei (0,0)
-- ‼️Die Laufwege zwischen den Produkten (Übergang zwischen den Gängen) wird nicht betrachtet. Es kann immer zwischen Gängen gewechselt werden. 
+- ‼️Die Laufwege zwischen den Produkten (Übergang zwischen den Gängen) ist definiert bei 0, +50 und -50 (first_row, last_row)
 - ‼️Die Breite der Regale und Gänge wird in der Aufgabenstellung nicht betrachtet.
-- ‼️Die Laufwege der "Packer" müssen nur rechtwinklig sein.
 - Die Begrenzung des Lagers betrifft eine x-y-Matrix der Wertigkeit -50 bis +50
 - Die Maximale Anzahl Bestellungen pro Durchlauf eines Mitarbeiters, das Fassungsvermögen des Containers und die möglichen Items sind ebenfalls in den Vorgaben deklariert.
 - ❓Gibt es Bestellungen, die alleine bereits das Volumen eines Containers Sprengen?!
@@ -133,9 +124,3 @@ Vielleicht wäre es eine Idee, Bestellungen mit den meisten identischen Produkte
     ]
 }
 ```
-
-# Fragestellungen zur Umsetzung
-- Welche Bestellungen können in welcher Zone am besten bearbeitet werden? (Batch)
-- Wie werden am besten die einzelnen Bestellungen eines Batch auf die jeweiligen Picking Lists verteilt um die Laufwege zu minimieren? (PickingListGeneration)
-Ziel (temp): geringste durchschnittliche Laufstrecke pro Produkt unter Berücksichtigung der gegebenen Rahmenparameter
-
