@@ -7,11 +7,135 @@ Ich hoffe du kannst mit den Infos arbeiten in den Präsi findest du noch ein paa
 # Ziele
 
 ## Primär
-Ein optimierter ALNS Algo. und Rekonstruierbarkeit der Ergebnisse
+Ein optimierter ALNS Algo. und Rekonstruierbarkeit der Ergebnisse. Oder alternativ ein "besserer" Algorithmusansatz.
 
 ## Sekundär
-Eine Kommentierte Version des ALNS, so das die Belegerstellung schneller geht^^ (Dienstag ist Abgabe xD)
+Eine Kommentierte Version des ALNS/des gewählten Algorithmus, so das die Belegerstellung schneller geht^^ (Dienstag ist Abgabe xD)
 
 ## Tertiär
 Den Beleg schreiben😂
+
+# Algorithmus
+## TBB (truncate branch-and-bound Algorithmus)
+Das vorliegende Problem wurde in dem Paper mit diesem Algorithmus gelöst. Es scheint optimale Ergebnisse zu bringen.
+Nachteil: der Algorithmus ist relativ rechenintensiv und zeitaufwändig. Allerdings wird Zeit zur Berechnung in der Aufgabenstellung nicht als Parameter berücksichtigt.
+Paper: https://www.fww.ovgu.de/fww_media/femm/femm_2017/2017_06.pdf
+
+## Ameisenalgorithmus (Ant Colony Optimization)
+Erster Treffer bei Google-Suche, der sinnvoll und effizient erscheint (Und auch zu meinem ersten gedanklichen Ansatz passt).
+Ansatz: Inspiriert vom Verhalten von Ameisen, die kürzeste Wege finden. Dieser Algorithmus simuliert die Suche nach optimalen Laufwegen im Lager.
+Vorteil: Besonders effektiv bei komplexen Lagerlayouts mit vielen möglichen Routen.
+Python Beispielimplementierung: https://github.com/Akavall/AntColonyOptimization
+
+## ALNS (Adaptive Large Neighborhood Search)
+Mögliche Lösung, durch Corbie/Pre-Entwickler versucht.
+Lib für Implementierung: https://github.com/N-Wouda/ALNS 
+
+## (x) K-Means Algorithm
+Eine Abgewandelte Form des K-Means Algorithmus anwenden, um die Produkte zu finden, die am nächsten beieinander liegen.
+Ergebnis: K-Means Algorithm ist fürs Clustering von Daten und nicht zur Laufwegoptimierung gedacht.
+
+# Gedanken
+## Chunking
+Vielleicht wäre es eine Idee, Bestellungen mit den meisten identischen Produkten zu gruppieren und einen Mitarbeiter dann alle ähnlichen Bestellungen abarbeiten lassen. Die einzelne Bestellung in dem jeweiligen Chunk wird dadurch vermutlich langsamer fertig gestellt. Allerdings sollte es dazu führen, das die einzelne Bestellung im Schnitt schneller abgeschlossen und die Laufwege im Gesamten verkürzt werden.
+-- Entsprechende Parametrisierung ist in den Parametern gegeben, sodass die Zusammenfassung von Bestellungen durch die Aufgabenstellung ermöglicht wird.
+
+
+# Vorgaben
+
+## Parameter eines "Packers"
+- ‼️Der Start und Endpunkt eines Packers liegt immer bei (0,0)
+- ‼️Die Laufwege zwischen den Produkten (Übergang zwischen den Gängen) wird nicht betrachtet. Es kann immer zwischen Gängen gewechselt werden. 
+- ‼️Die Breite der Regale und Gänge wird in der Aufgabenstellung nicht betrachtet.
+- ‼️Die Laufwege der "Packer" müssen nur rechtwinklig sein.
+- Die Begrenzung des Lagers betrifft eine x-y-Matrix der Wertigkeit -50 bis +50
+- Die Maximale Anzahl Bestellungen pro Durchlauf eines Mitarbeiters, das Fassungsvermögen des Containers und die möglichen Items sind ebenfalls in den Vorgaben deklariert.
+- ❓Gibt es Bestellungen, die alleine bereits das Volumen eines Containers Sprengen?!
+
+```json
+{
+    "min_number_requested_items": 50,
+    "max_orders_per_batch": 15,
+    "max_container_volume": 500,
+    "first_row": -50,
+    "last_row": 50,
+    "first_aisle": -50,
+    "last_aisle": 50
+},
+```
+
+## Parameter eines Artikels
+- Ein Artikel besitzt eine ID 
+- Ein Artikel besitzt ein Volumen, welches sich auf das Volumen des "Packers" auswirkt
+  
+```json
+{
+    "id": "article-2",
+    "volume": 53
+},
+```
+
+## Parameter einer Bestellung
+- Eine Bestellung besitzt eine ID
+- Eine Bestellung besitzt die Bestellpositionen
+  
+```json
+{
+    "id": "order-0",
+    "positions": [
+        "article-239",
+        "article-195"
+    ]
+},
+```
+
+## Parameter eines Artikels im Warenhaus
+- Ein Artikel im Warenhaus hat eine ID
+- Ein Artikel im Warenhaus hat einen Lagerort (Gang und Fach)
+- Ein Artikel im Warenhaus ist einer Zone zugeordnet, in der die zugehörige Bestellung verarbeitet werden muss
+  
+```json
+{
+    "id": "warehouse-item-0",
+    "row": 49,
+    "aisle": 44,
+    "article": "article-0",
+    "zone": "zone-0"
+},
+```
+
+## Batch
+- Ein Batch besteht immer aus mehreren Picking Lists, in der sich die spezifischen Artikel im Warenhaus befinden
+- Jede Picking List beginnt bei 0,0 und wird durch den Packer abgearbeitet
+- Ein Batch besteht immer aus den Bestellungen, die mit diesem Batch abgeschlossen werden.
+- ‼️Die erzeugten Batches werden anschließend als Ergebnis der Evaluation zur Visualisierung des Ergebnisses verwendet.
+
+```json
+{
+    "instance": "small-0",
+    "batches": [
+        {
+            "picklists": [
+                [
+                    "warehouse-item-782",
+                    "warehouse-item-204"
+                ],
+                [
+                    "warehouse-item-677",
+                    "warehouse-item-345"
+                ],
+            ],
+            "orders": [
+                "order-33",
+                "order-39"
+            ]
+        }
+    ]
+}
+```
+
+# Fragestellungen zur Umsetzung
+- Welche Bestellungen können in welcher Zone am besten bearbeitet werden? (Batch)
+- Wie werden am besten die einzelnen Bestellungen eines Batch auf die jeweiligen Picking Lists verteilt um die Laufwege zu minimieren? (PickingListGeneration)
+Ziel (temp): geringste durchschnittliche Laufstrecke pro Produkt unter Berücksichtigung der gegebenen Rahmenparameter
 
