@@ -5,7 +5,7 @@ import logging
 
 from batching_problem.definitions import Instance
 from distance_greedy_algorithm.solver import greedy_solver
-
+from alns_algorithm import alns_solver
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s %(asctime)s %(message)s",
@@ -25,8 +25,9 @@ def run(instanceDirectory, instance, solutionApproach) -> None:
     
     ###### hier kann ihr Algorithmus eingefügt werden
 
+    instance.batches = alns_solver(instance)
 
-    instance.batches = greedy_solver(instance, "rdga")
+    #instance.batches = greedy_solver(instance, "dga")
     logger.info("batches created")
     time_elapsed = round(time.time() - start_time)
     logger.info("Evaluating results")
@@ -43,7 +44,9 @@ if __name__ == "__main__":
     currFilePath = os.path.dirname(__file__)
     instanceDirectory = f"{currFilePath}\\instances"  # Verzeichnis von den Instanzen
     instancesToSolve=["tiny-0"]   # auszuführende Instanzen angeben
-    solutionApproach = "dga"  # Algorithmus, der verwendet werden soll 
+    #olutionApproach = "dga"  # Algorithmus, der verwendet werden soll 
+    solutionApproach = "alns"
+
 
     random.seed(1)
 

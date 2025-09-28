@@ -15,11 +15,8 @@ Neu:
     }
 """
 
-import math
 import random
 import itertools
-import json
-import uuid
 import numpy as np
 from typing import List, Tuple, Dict, Any
 import batching_problem.definitions as bpd
@@ -120,6 +117,7 @@ def best_order_combination_multi_locations(
         for combo in itertools.combinations(order_indices, r):
             all_items = [item for idx in combo for item in orders[idx]['items']]
             total_items = len(all_items)
+            print(all_items)
             if total_items < min_items:
                 continue
             total_volume = sum(item_volumes[item] for item in all_items)
@@ -147,7 +145,7 @@ def best_order_combination_multi_locations(
                 for i in range(n):
                     for j in range(n):
                         dist_matrix[i, j] = manhattan_distance(coords[i], coords[j])
-                aco = AntColony(dist_matrix, n_ants=n, n_iterations=5000)
+                aco = AntColony(dist_matrix, n_ants=n, n_iterations=500)
                 tour, length = aco.run()
                 total_length += length
                 zone_tours[zone] = (tour, length)
@@ -225,7 +223,6 @@ def run(instance:bpd.Instance):
     item_volumes = flat_item_volumes(instance.articles)
     orders = flat_orders(instance.orders)
     
-    
     combo, total_length, zone_results, chosen_locs, orders = best_order_combination_multi_locations(
         orders,
         item_locations,
@@ -240,5 +237,4 @@ def run(instance:bpd.Instance):
     for zone, (tour, length) in zone_results.items():
         print(f"Zone {zone}: Länge {length}, Tour {tour}")
     print("Gewählte Standorte pro Artikel:", chosen_locs)
-    print("Picking-List wurde als picking_list.json gespeichert.")
-    return build_batch(instance=instance, best_combo=combo, best_chosen_locations=chosen_locs, chosen_orders=orders) if combo is not None else None
+    return build_batch(instance=instance, best_combo=combo, best_chosen_locations=chosen_locs, chosen_orders=orders) if combo is not None else instance.batches

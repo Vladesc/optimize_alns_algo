@@ -2,9 +2,9 @@ import os
 import random
 import time
 import logging
+import aco_algorithm as acoa
 
 from batching_problem.definitions import Instance
-from distance_greedy_algorithm.solver import greedy_solver
 
 logging.basicConfig(
     level=logging.INFO,
@@ -14,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def run(instanceDirectory, instance, solutionApproach) -> None:
+def run(in1stanceDirectory, instance) -> None:
     path = f"{instanceDirectory}/{instance}"
     logger.info(f"Running algorithm for {instance} instance")
     start_time = time.time()
@@ -23,10 +23,11 @@ def run(instanceDirectory, instance, solutionApproach) -> None:
     instance.read(path)
     logger.info("Creating batches")
     
-    ###### hier kann ihr Algorithmus eingefügt werden
 
+    instance.batches = acoa.run(instance=instance)
 
-    instance.batches = greedy_solver(instance, "rdga")
+    
+    pass 
     logger.info("batches created")
     time_elapsed = round(time.time() - start_time)
     logger.info("Evaluating results")
@@ -42,11 +43,11 @@ def run(instanceDirectory, instance, solutionApproach) -> None:
 if __name__ == "__main__":
     currFilePath = os.path.dirname(__file__)
     instanceDirectory = f"{currFilePath}\\instances"  # Verzeichnis von den Instanzen
-    instancesToSolve=["tiny-0"]   # auszuführende Instanzen angeben
-    solutionApproach = "dga"  # Algorithmus, der verwendet werden soll 
+    #instancesToSolve=["tiny-0","small-0","medium-0"]   # auszuführende Instanzen angeben
 
+    instancesToSolve=["tiny-0"]   # auszuführende Instanzen angeben
     random.seed(1)
 
     for instance in instancesToSolve:
-            run(instanceDirectory, instance, solutionApproach)
+            run(instanceDirectory, instance)
 

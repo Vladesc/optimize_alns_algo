@@ -2,7 +2,7 @@ import os
 import random
 import time
 import logging
-import aco_algorithm as acoa
+import tbb_algorithm as tbb
 
 from batching_problem.definitions import Instance
 
@@ -19,12 +19,14 @@ def run(in1stanceDirectory, instance) -> None:
     logger.info(f"Running algorithm for {instance} instance")
     start_time = time.time()
     logger.info("Reading instance")
-    instance = Instance(path)
+    instance = Instance(path) 
     instance.read(path)
     logger.info("Creating batches")
     
 
-    instance.batches = acoa.run(instance=instance)
+    instance.batches = tbb.tbbsolver(instance)
+
+    
     pass 
     logger.info("batches created")
     time_elapsed = round(time.time() - start_time)
@@ -43,7 +45,7 @@ if __name__ == "__main__":
     instanceDirectory = f"{currFilePath}\\instances"  # Verzeichnis von den Instanzen
     #instancesToSolve=["tiny-0","small-0","medium-0"]   # auszuführende Instanzen angeben
 
-    instancesToSolve=["small-0"]   # auszuführende Instanzen angeben
+    instancesToSolve=["tiny-0"]   # auszuführende Instanzen angeben
     random.seed(1)
 
     for instance in instancesToSolve:

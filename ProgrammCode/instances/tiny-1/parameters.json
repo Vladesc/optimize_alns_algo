@@ -1,5 +1,5 @@
 {
-    "min_number_requested_items": 8,
+    "min_number_requested_items": 10,
     "max_orders_per_batch": 3,
     "max_container_volume": 250,
     "first_row": -50,
