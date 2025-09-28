@@ -73,123 +73,6 @@ def manhattan(a: Tuple[int, int], b: Tuple[int, int]) -> int:
 def order_volume(order: Order) -> float:
     return sum(a.volume for a in order.positions)
 
-
-# ---------------------- Phase A: Branch-and-Bound (orders & articles only) ----------------------
-# Important: This phase operates purely on Order/Article level. It never assigns concrete WarehouseItems.
-
-class TruncatedBBOrders:
-    def __init__(self, orders: List[Order], article_to_items: Dict[str, List[WarehouseItem]], params: Parameters, trunc_nodes: int = 20000):
-        self.orders = orders
-        self.article_to_items = article_to_items  # only used to compute optimistic lower-bounds (min dist per article)
-        self.params = params
-
-        #self.depot = (params.first_row, params.first_aisle) #TODO--------------------------------------- default value
-        self.depot = (50, 50) # STARTPOSITION DES COMMISSIONIERERS
-
-        # Precompute simple per-article optimistic distance: smallest distance from depot to any WarehouseItem of that article.
-        # This uses warehouse catalog only to compute a *lower bound* on walking per article — BUT does not fix which WarehouseItem will be used.
-        self.article_min_dist = {}
-        for aid, witems in article_to_items.items():
-            self.article_min_dist[aid] = min(manhattan((w.row, w.aisle), self.depot) for w in witems)
-
-        self.best_cost = float('inf')
-        self.best_selection_indexes: List[int] = []  # indexes of orders in self.orders
-        self.nodes = 0
-        self.trunc_nodes = trunc_nodes
-
-        self.order_volumes = [order_volume(o) for o in orders]
-        self.order_item_counts = [len(o.positions) for o in orders]
-
-        # heuristic order (more items / more volume first)
-        self.indexes = list(range(len(orders)))
-        self.indexes.sort(key=lambda i: (-self.order_item_counts[i], -self.order_volumes[i]))
-
-    def run(self) -> List[int]:
-        self._branch(0, [], 0.0, 0)
-        return self.best_selection_indexes
-
-    def _current_lower_bound_for_selection(self, sel_idxs: List[int]) -> float:
-        # lower bound = sum of minimal distances to depot for unique articles in the selection
-        uniq_articles = set()
-        for si in sel_idxs:
-            ord = self.orders[si]
-            for a in ord.positions:
-                uniq_articles.add(a.id)
-        lb = 0.0
-        for aid in uniq_articles:
-            lb += self.article_min_dist.get(aid, 0)
-        # This LB is admissible but optimistic (ignores routing savings)
-        return lb
-
-    def _branch(self, depth: int, current_sel: List[int], curr_volume: float, curr_items: int):
-        # truncation check
-        if self.nodes >= self.trunc_nodes:
-            return
-        self.nodes += 1
-
-        # feasibility checks
-        if len(current_sel) > self.params.max_orders_per_batch:
-            return
-        if curr_volume > self.params.max_container_volume:
-            return
-
-        # lower bound pruning
-        lb = self._current_lower_bound_for_selection(current_sel)
-        if lb >= self.best_cost:
-            return
-
-        # if meets minimum item count, consider updating best using LB as cost estimate (actual cost computed later in phase B)
-        if curr_items >= getattr(self.params, 'min_number_requested_items', 0):
-            # we use lb as optimistic cost; only accept if lb < best_cost so far
-            if lb < self.best_cost:
-                # store current selection (note: best_cost will be refined in phase B when mapping to items)
-                self.best_cost = lb
-                self.best_selection_indexes = list(current_sel)
-
-        # if we've exhausted orders
-        if depth >= len(self.indexes):
-            return
-
-        # branch: include or exclude next order (by the sorted index list)
-        next_idx = self.indexes[depth]
-
-        # include
-        current_sel.append(next_idx)
-        self._branch(depth + 1, current_sel, curr_volume + self.order_volumes[next_idx], curr_items + self.order_item_counts[next_idx])
-        current_sel.pop()
-
-        # exclude
-        self._branch(depth + 1, current_sel, curr_volume, curr_items)
-
-
-# ---------------------- Phase B: Map selected Articles -> WarehouseItems and produce picklists ----------------------
-def compute_zone_pick_cost(items: List[WarehouseItem], depot: Tuple[int,int]) -> Tuple[int, List[WarehouseItem]]:
-    # simple greedy nearest-neighbour tour per zone (start and end at depot)
-    if not items:
-        return 0, []
-    nodes = list(items)
-    curr = depot
-    remain = set((n.row, n.aisle, n.article.id) for n in nodes)
-    uniq = {n.article.id: n for n in nodes}
-    ordered: List[WarehouseItem] = []
-    cost = 0
-    while remain:
-        best = None
-        best_d = None
-        for r,a,aid in remain:
-            d = manhattan(curr, (r,a))
-            if best_d is None or d < best_d:
-                best_d = d
-                best = (r,a,aid)
-        r,a,aid = best
-        w = uniq[aid]
-        ordered.append(w)
-        cost += best_d
-        curr = (r,a)
-        remain.remove(best)
-    cost += manhattan(curr, depot)
-    return cost, ordered
-    
 # ---------------------- NEAREST FIRST ----------------------
 
 def map_articles_to_warehouseitems_nearest_first(
@@ -229,8 +112,6 @@ def map_articles_to_warehouseitems_nearest_first(
             raise ValueError(f"Nicht genügend WarehouseItems für Artikel {aid}, benötigt {count}, gefunden {assigned}")
     return article_assignment
 
-
-
 # ---------------------- Large Data----------------------
 def optimize_tour_2opt(tour: list, depot: tuple) -> tuple[int, list]:
     """
@@ -257,7 +138,6 @@ def optimize_tour_2opt(tour: list, depot: tuple) -> tuple[int, list]:
         # Wenn keine Verbesserung möglich, Abbruch
     return best_cost, best_order
 
-
 def tour_cost(items: list, depot: tuple) -> int:
     """Berechnet Manhattan-Distanz einer Tour (inklusive Rückweg)"""
     curr = depot
@@ -268,152 +148,104 @@ def tour_cost(items: list, depot: tuple) -> int:
     cost += manhattan(curr, depot)
     return cost
 
-## ---------------------- Optimize ----------------------
-def compute_dynamic_tours(
-    article_assignment: dict,
-    depot: tuple
-) -> tuple[int, list[list]]:
+#----------------------Kostenberechnung pro Artikel----------------------
+def estimate_order_distance_per_article(order, used_items, article_to_items, depot=(50,50)):
     """
-    Dynamische Tourenplanung:
-    - Maximale Items pro Tour wird automatisch ermittelt
-    - Ziel: Minimale Gesamtdistanz über alle Touren
+    Schätzt die Distanz pro Artikel für eine einzelne Order.
+    - Wählt für jedes Artikel-Vorkommen das nächstgelegene WarehouseItem
+    - Gibt die durchschnittliche Distanz pro Artikel zurück
+    """
+    distances = []
+    temp_used_items = set(used_items)
+    for article in order.positions:
+        candidates = [w for w in article_to_items[article.id] if w.id not in temp_used_items]
+        if not candidates:
+            continue
+        nearest = min(candidates, key=lambda w: manhattan(depot, (w.row, w.aisle)))
+        distances.append(manhattan(depot, (nearest.row, nearest.aisle)))
+        temp_used_items.add(nearest.id)
+    if not distances:
+        return float('inf')
+    return sum(distances) / len(distances)
+
+#----------------------Auswahl der Order----------------------
+def select_orders_min_avg_distance(orders, article_to_items, depot=(50,50)):
+    selected_orders = []
+    used_items = set()
+    remaining_orders = orders[:]
+
+    while remaining_orders:
+        best_order = None
+        best_avg_distance = float('inf')
+
+        for order in remaining_orders:
+            avg_dist = estimate_order_distance_per_article(order, used_items, article_to_items, depot)
+            if avg_dist < best_avg_distance:
+                best_avg_distance = avg_dist
+                best_order = order
+
+        if best_order is None:
+            break
+
+        # Füge Order hinzu
+        selected_orders.append(best_order)
+        # Reserviere WarehouseItems
+        for article in best_order.positions:
+            candidates = [w for w in article_to_items[article.id] if w.id not in used_items]
+            if candidates:
+                nearest = min(candidates, key=lambda w: manhattan(depot, (w.row, w.aisle)))
+                used_items.add(nearest.id)
+        remaining_orders.remove(best_order)
+
+    return selected_orders
+
+#----------------------Multi Tour Packlistenplanung----------------------
+def compute_picklists_min_avg_distance(article_assignment, depot=(50,50)):
+    """
+    Baut dynamische Picklists, minimiert durchschnittliche Distanz pro Artikel
     """
     remaining_items = set(article_assignment.values())
     picklists = []
-    total_cost = 0
 
     while remaining_items:
         tour_items = []
         curr_pos = depot
 
-        # Greedy: nächstes Item wählen, dynamisch entscheiden, wann neue Tour starten
         while remaining_items:
-            nearest = min(remaining_items, key=lambda w: manhattan((w.row, w.aisle), curr_pos))
-            # Prüfe: Hinzufügen dieses Items macht die Tour länger als Start einer neuen Tour?
+            nearest = min(remaining_items, key=lambda w: manhattan(curr_pos, (w.row, w.aisle)))
             projected_cost = tour_cost(tour_items + [nearest], depot)
-            # Wenn die aktuelle Tour + neues Item > Abstand über neue Tour? -> optional heuristisch
-            # Hier nehmen wir einfach Greedy bis alle Items gepickt sind
-            tour_items.append(nearest)
-            remaining_items.remove(nearest)
-            curr_pos = (nearest.row, nearest.aisle)
-
-            # Dynamisch entscheiden, ob wir die Tour abschließen:  
-            # z.B. wenn weitere Items weiter weg sind als Rückweg zum Depot + nächste Tour
-            if remaining_items:
-                next_nearest_dist = min(manhattan((w.row, w.aisle), depot) for w in remaining_items)
-                if next_nearest_dist + manhattan(curr_pos, depot) > projected_cost:
-                    break  # Starte neue Tour
-
-        # Optimierung der Tour mit 2-opt
-        cost, ordered = optimize_tour_2opt(tour_items, depot)
-        total_cost += cost
-        picklists.append(ordered)
-
-    return total_cost, picklists
-
-
-def two_phase_truncated_bnb_dynamic(
-    orders: list,
-    warehouse_items: list,
-    params,
-    truncation_nodes: int = 20000
-) -> Batch:
-    """
-    Algorithmus mit dynamischer Tourgröße:
-    - Phase A: Branch & Bound auf Order/Article-Ebene
-    - Phase B: Jedem Artikel-Vorkommen wird ein WarehouseItem zugeordnet
-    - Phase B: dynamische Tourenplanung mit optimierter Reihenfolge
-    """
-    # Mapping Artikel -> Lagerplätze
-    article_to_items = {}
-    for wi in warehouse_items:
-        article_to_items.setdefault(wi.article.id, []).append(wi)
-
-    # Phase A
-    bb = TruncatedBBOrders(orders, article_to_items, params, trunc_nodes=truncation_nodes)
-    best_sel_indexes = bb.run()
-    selected_orders = [orders[i] for i in best_sel_indexes]
-
-    depot = (50, 50)
-
-    # Phase B: jedem Artikel-Vorkommen ein WarehouseItem zuordnen
-    article_assignment = map_articles_to_warehouseitems_nearest_first(selected_orders, article_to_items, depot)
-
-    # Phase B: dynamische Tourenplanung
-    total_cost, picklists = compute_dynamic_tours(article_assignment, depot)
-
-    return Batch(selected_orders, picklists)
-
-# ---------------------- Optimize ----------------------
-def compute_multi_tour_global_optimized(article_assignment, depot=(50,50)):
-    """
-    Globale Tourenplanung für mehrere Picklists:
-    - Dynamische Tourgrößen
-    - Jede Tour startet und endet am Depot
-    - Minimiert Gesamtlaufstrecke
-    """
-    remaining_items = set(article_assignment.values())
-    picklists = []
-    total_cost = 0
-
-    while remaining_items:
-        tour_items = []
-        curr_pos = depot
-
-        # Items in dieser Tour auswählen
-        while remaining_items:
-            # Score: Entfernung vom aktuellen Punkt + Rückweg zum Depot
-            def item_score(w):
-                return manhattan(curr_pos, (w.row, w.aisle)) + manhattan((w.row, w.aisle), depot)
-
-            nearest = min(remaining_items, key=item_score)
-
-            # Dynamisch entscheiden, ob neues Item in aktuelle Tour passt
-            projected_tour_cost = tour_cost(tour_items + [nearest], depot)
             new_tour_cost = tour_cost([nearest], depot)
-            # Wenn das Hinzufügen eines weit entfernten Items die Tour ineffizient macht, starte neue Tour
-            if tour_items and new_tour_cost < projected_tour_cost * 0.95:
+            if tour_items and new_tour_cost < projected_cost * 0.95:
                 break
-
             tour_items.append(nearest)
             remaining_items.remove(nearest)
             curr_pos = (nearest.row, nearest.aisle)
 
-        # 2-opt Optimierung für diese Tour
-        cost, optimized_order = optimize_tour_2opt(tour_items, depot)
-        total_cost += cost
+        # 2-opt Optimierung innerhalb der Picklist
+        _, optimized_order = optimize_tour_2opt(tour_items, depot)
         picklists.append(optimized_order)
 
-    return total_cost, picklists
+    return picklists
 
-
-def two_phase_bnb_multi_tour_global(orders, warehouse_items, params, truncation_nodes=20000):
-    """
-    Vollständiger Algorithmus:
-    - Phase A: Branch & Bound Order-Auswahl
-    - Phase B: Jedem Artikel-Vorkommen ein WarehouseItem zuordnen
-    - Phase B: Globale Picklist-Optimierung über mehrere Touren
-    """
+#----------------------Aufruf Gesamtalgorithmus----------------------
+def two_phase_min_avg_distance(orders, warehouse_items, params):
     # Artikel -> Lagerplätze
     article_to_items = {}
     for wi in warehouse_items:
         article_to_items.setdefault(wi.article.id, []).append(wi)
 
-    # Phase A: Branch & Bound
-    bb = TruncatedBBOrders(orders, article_to_items, params, trunc_nodes=truncation_nodes)
-    best_sel_indexes = bb.run()
-    selected_orders = [orders[i] for i in best_sel_indexes]
-
-    # Jedem Artikel-Vorkommen ein WarehouseItem zuordnen
     depot = (50,50)
+
+    # Phase A: Order-Auswahl minimiert Distanz pro Artikel
+    selected_orders = select_orders_min_avg_distance(orders, article_to_items, depot)
+
+    # Phase B: Jedem Artikel-Vorkommen WarehouseItem zuordnen
     article_assignment = map_articles_to_warehouseitems_nearest_first(selected_orders, article_to_items, depot)
 
-    # Globale Multi-Tour-Optimierung
-    total_cost, picklists = compute_multi_tour_global_optimized(article_assignment, depot)
+    # Phase B: Picklists dynamisch zusammenstellen
+    picklists = compute_picklists_min_avg_distance(article_assignment, depot)
 
     return Batch(selected_orders, picklists)
-
-
 
 # ---------------------- Example (commented) ----------------------
 """
@@ -478,7 +310,7 @@ def tbbsolver(instance:bpd.Instance) -> List[bpd.Batch]:
         last_aisle=instance.parameters.last_aisle*2 if instance.parameters.last_aisle >= 0 else instance.parameters.last_aisle * -1,
     )
 
-    batch = two_phase_bnb_multi_tour_global(orders, warehouse_items, params, truncation_nodes=5000)
+    batch = two_phase_min_avg_distance(orders, warehouse_items, params)
     print(batch.orders)
     print(batch.picklists)
     for i in range(len(batch.picklists)):
