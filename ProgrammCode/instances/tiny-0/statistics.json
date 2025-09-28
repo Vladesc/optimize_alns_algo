@@ -1,7 +1,7 @@
 {
     "time_elapsed": 0,
-    "nbr_picklist_items": 0,
-    "nbr_picklists": 0,
-    "objective_value": 0,
-    "feasible": false
+    "nbr_picklist_items": 9,
+    "nbr_picklists": 8,
+    "objective_value": 968.0,
+    "feasible": true
 }
